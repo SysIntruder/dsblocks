@@ -1,0 +1,6 @@
+BasedOnStyle: LLVM
+AlignAfterOpenBracket: BlockIndent
+AllowShortFunctionsOnASingleLine: false
+BreakBeforeBraces: Linux
+BreakBeforeTernaryOperators: false
+ColumnLimit: 0
