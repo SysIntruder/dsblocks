@@ -71,7 +71,7 @@ void togglemute(int iscapture, int *mute)
     return;
   }
 
-  *mute = !mute;
+  *mute = !*mute;
   if (iscapture) {
     snd_mixer_selem_set_capture_switch_all(elem, *mute);
   } else {
@@ -82,7 +82,7 @@ void togglemute(int iscapture, int *mute)
   snd_mixer_selem_id_free(sid);
 }
 
-void changevolume(int up, int iscapture, long *min, long *max, long *val, long step)
+void changevolume(int up, int iscapture, long step, long *min, long *max, long *val)
 {
   long delta, nv;
   snd_mixer_t *handle;

@@ -13,6 +13,11 @@ enum { CmdDate,
        CmdMic,
        CmdSpk };
 
+enum { BtnLeft = 1,
+       BtnRight,
+       BtnScUp,
+       BtnScDn };
+
 typedef struct {
   int cmd;
   int interval;
@@ -65,15 +70,46 @@ void cmdbat(int i)
     sprintf(sblocks[i], "%cP: %d%%%c", blocks[i].signal, batcap, blocks[i].signal);
 }
 
-void cmdbri(int i)
+void clkbri(int b)
 {
+  switch (b) {
+  case BtnScUp:
+    changebrightness(1, STEP, &rbri, &maxbri);
+    break;
+  case BtnScDn:
+    changebrightness(0, STEP, &rbri, &maxbri);
+    break;
+  }
+}
+
+void cmdbri(int i, int b)
+{
+  if (b)
+    clkbri(b);
   readbrightness(&rbri, &maxbri);
   updatebriperc();
   sprintf(sblocks[i], "%cB: %.f%%%c", blocks[i].signal, briperc, blocks[i].signal);
 }
 
-void cmdmic(int i)
+void clkmic(int b)
 {
+  switch (b) {
+  case BtnLeft:
+    togglemute(1, &micon);
+    break;
+  case BtnScUp:
+    changevolume(1, 1, STEP, &minmic, &maxmic, &rmic);
+    break;
+  case BtnScDn:
+    changevolume(0, 1, STEP, &minmic, &maxmic, &rmic);
+    break;
+  }
+}
+
+void cmdmic(int i, int b)
+{
+  if (b)
+    clkmic(b);
   readvolume(1, &minmic, &maxmic, &rmic, &micon);
   updatemicperc();
   if (micon)
@@ -82,8 +118,25 @@ void cmdmic(int i)
     sprintf(sblocks[i], "%cM: MUTE%c", blocks[i].signal, blocks[i].signal);
 }
 
-void cmdspk(int i)
+void clkspk(int b)
 {
+  switch (b) {
+  case BtnLeft:
+    togglemute(0, &micon);
+    break;
+  case BtnScUp:
+    changevolume(1, 0, STEP, &minspk, &maxspk, &rspk);
+    break;
+  case BtnScDn:
+    changevolume(0, 0, STEP, &minspk, &maxspk, &rspk);
+    break;
+  }
+}
+
+void cmdspk(int i, int b)
+{
+  if (b)
+    clkspk(b);
   readvolume(0, &minspk, &maxspk, &rspk, &spkon);
   updatespkperc();
   if (spkon)
@@ -92,34 +145,15 @@ void cmdspk(int i)
     sprintf(sblocks[i], "%cV: MUTE%c", blocks[i].signal, blocks[i].signal);
 }
 
-void readstatus()
+void sighandler(int signum, siginfo_t *si, void *ucontext)
 {
-  for (int i = 0; i < LENGTH(blocks); i++) {
-    switch (blocks[i].cmd) {
-    case CmdDate:
-      cmddate(i);
-      break;
-    case CmdBat:
-      cmdbat(i);
-      break;
-    case CmdBri:
-      cmdbri(i);
-      break;
-    case CmdMic:
-      cmdmic(i);
-      break;
-    case CmdSpk:
-      cmdspk(i);
-      break;
-    }
-  }
-}
+  int sig, btn;
 
-void handlesignal(int sig, siginfo_t *info, void *ctx)
-{
-  if (info->si_value.sival_int) {
+  sig = signum - SIGRTMIN;
+  btn = si->si_value.sival_int;
+  if (btn) {
     for (int i = 0; i < LENGTH(blocks); i++) {
-      if (blocks[i].signal != 0 && blocks[i].signal == info->si_value.sival_int) {
+      if (blocks[i].signal != 0 && blocks[i].signal == sig) {
         switch (blocks[i].cmd) {
         case CmdDate:
           cmddate(i);
@@ -128,16 +162,46 @@ void handlesignal(int sig, siginfo_t *info, void *ctx)
           cmdbat(i);
           break;
         case CmdBri:
-          cmdbri(i);
+          cmdbri(i, btn);
           break;
         case CmdMic:
-          cmdmic(i);
+          cmdmic(i, btn);
           break;
         case CmdSpk:
-          cmdspk(i);
+          cmdspk(i, btn);
           break;
         }
       }
+    }
+  }
+}
+
+void readstatus()
+{
+  struct sigaction sa;
+
+  sa.sa_sigaction = sighandler;
+  sa.sa_flags = SA_SIGINFO;
+
+  for (int i = 0; i < LENGTH(blocks); i++) {
+    if (blocks[i].signal)
+      sigaction(SIGRTMIN + blocks[i].signal, &sa, NULL);
+    switch (blocks[i].cmd) {
+    case CmdDate:
+      cmddate(i);
+      break;
+    case CmdBat:
+      cmdbat(i);
+      break;
+    case CmdBri:
+      cmdbri(i, 0);
+      break;
+    case CmdMic:
+      cmdmic(i, 0);
+      break;
+    case CmdSpk:
+      cmdspk(i, 0);
+      break;
     }
   }
 }
@@ -174,13 +238,13 @@ void run(Display *dpy)
           cmdbat(i);
           break;
         case CmdBri:
-          cmdbri(i);
+          cmdbri(i, 0);
           break;
         case CmdMic:
-          cmdmic(i);
+          cmdmic(i, 0);
           break;
         case CmdSpk:
-          cmdspk(i);
+          cmdspk(i, 0);
           break;
         }
       }
@@ -191,7 +255,7 @@ void run(Display *dpy)
         strcat(status, DELIMITER);
     }
     if (debug) {
-      printf("%s\n", status);
+      printf("%d %s\n", getpid(), status);
     } else {
       XStoreName(dpy, root, status);
       XFlush(dpy);
@@ -216,7 +280,7 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
-  sa.sa_sigaction = handlesignal;
+  sa.sa_sigaction = sighandler;
   sa.sa_flags = SA_SIGINFO;
   sigemptyset(&sa.sa_mask);
   sigaction(SIGRTMIN, &sa, NULL);
