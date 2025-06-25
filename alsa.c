@@ -50,9 +50,8 @@ void readvolume(int iscapture, long *min, long *max, long *val, int *mute)
   snd_mixer_selem_id_t *sid;
   snd_mixer_elem_t *elem;
 
-  if (gethandleelem(&handle, &sid, &elem, iscapture) == 1) {
+  if (gethandleelem(&handle, &sid, &elem, iscapture) == 1)
     return;
-  }
 
   if (iscapture)
     initplaybackvolume(elem, min, max, val, mute);
@@ -69,16 +68,14 @@ void togglemute(int iscapture, int *mute)
   snd_mixer_selem_id_t *sid;
   snd_mixer_elem_t *elem;
 
-  if (gethandleelem(&handle, &sid, &elem, iscapture) == 1) {
+  if (gethandleelem(&handle, &sid, &elem, iscapture) == 1)
     return;
-  }
 
   *mute = !*mute;
-  if (iscapture) {
+  if (iscapture)
     snd_mixer_selem_set_capture_switch_all(elem, *mute);
-  } else {
+  else
     snd_mixer_selem_set_playback_switch_all(elem, *mute);
-  }
 
   snd_mixer_close(handle);
   snd_mixer_selem_id_free(sid);
@@ -91,9 +88,8 @@ void changevolume(int up, int iscapture, long step, long *min, long *max, long *
   snd_mixer_selem_id_t *sid;
   snd_mixer_elem_t *elem;
 
-  if (gethandleelem(&handle, &sid, &elem, iscapture) == 1) {
+  if (gethandleelem(&handle, &sid, &elem, iscapture) == 1)
     return;
-  }
 
   delta = (*max - *min) * step / 100;
   nv = up ? *val + delta : *val - delta;
