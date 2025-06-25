@@ -40,7 +40,7 @@ static long rmic, minmic, maxmic;
 static int spkon, micon;
 static float briperc, spkperc, micperc;
 static char sblocks[LENGTH(blocks)][BLOCKLEN];
-static int counter, debug, update;
+static int counter, debug, update, error;
 
 void updatebriperc()
 {
@@ -60,7 +60,10 @@ void updatemicperc()
 
 void cmddate(int i)
 {
-  readdate(sblocks[i], BLOCKLEN);
+  char tmp[BLOCKLEN];
+
+  readdate(tmp, BLOCKLEN);
+  sprintf(sblocks[i], "%c%s%c", blocks[i].signal, tmp, blocks[i].signal);
 }
 
 void cmdbat(int i)
@@ -176,7 +179,7 @@ void sighandler(int signum, siginfo_t *si, void *ucontext)
   btn = si->si_value.sival_int;
   if (btn) {
     for (int i = 0; i < LENGTH(blocks); i++) {
-      if (blocks[i].signal != 0 && blocks[i].signal == sig) {
+      if (blocks[i].signal == sig) {
         update = 1;
         runcmd(i, btn);
       }
@@ -193,8 +196,13 @@ void setup()
 
   update = 1;
   for (int i = 0; i < LENGTH(blocks); i++) {
-    if (blocks[i].signal)
+    if (!blocks[i].signal) {
+      printf("use 31 to ignore signal, aborting\n");
+      error = 1;
+      break;
+    } else if (blocks[i].signal != 31) {
       sigaction(SIGRTMIN + blocks[i].signal, &sa, NULL);
+    }
     runcmd(i, 0);
   }
 }
@@ -215,7 +223,7 @@ void run(Display *dpy)
   root = DefaultRootWindow(dpy);
   blen = LENGTH(blocks);
 
-  while (1) {
+  while (!error) {
     if ((++counter) == 60)
       counter = 0;
     for (int i = 0; i < blen; i++) {
@@ -275,5 +283,8 @@ int main(int argc, char *argv[])
   setup();
   run(dpy);
   XCloseDisplay(dpy);
-  return EXIT_SUCCESS;
+  if (error)
+    return EXIT_FAILURE;
+  else
+    return EXIT_SUCCESS;
 }
