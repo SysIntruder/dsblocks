@@ -1,3 +1,5 @@
+/* See LICENSE file for copyright and license details. */
+
 #include <time.h>
 
 void readdate(char *d, size_t ds)

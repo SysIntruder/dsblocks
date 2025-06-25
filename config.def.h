@@ -1,3 +1,5 @@
+/* See LICENSE file for copyright and license details. */
+
 #define CAPACITY "/sys/class/power_supply/BAT0/capacity"
 #define ADAPTER "/sys/class/power_supply/ADP0/online"
 #define BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/brightness"

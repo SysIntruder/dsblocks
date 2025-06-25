@@ -1,3 +1,5 @@
+/* See LICENSE file for copyright and license details. */
+
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
