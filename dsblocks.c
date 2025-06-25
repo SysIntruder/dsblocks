@@ -38,7 +38,7 @@ static long rmic, minmic, maxmic;
 static int spkon, micon;
 static float briperc, spkperc, micperc;
 static char sblocks[LENGTH(blocks)][BLOCKLEN];
-static int counter, debug;
+static int counter, debug, update;
 
 void updatebriperc()
 {
@@ -154,6 +154,7 @@ void sighandler(int signum, siginfo_t *si, void *ucontext)
   if (btn) {
     for (int i = 0; i < LENGTH(blocks); i++) {
       if (blocks[i].signal != 0 && blocks[i].signal == sig) {
+        update = 1;
         switch (blocks[i].cmd) {
         case CmdDate:
           cmddate(i);
@@ -176,13 +177,14 @@ void sighandler(int signum, siginfo_t *si, void *ucontext)
   }
 }
 
-void readstatus()
+void setup()
 {
   struct sigaction sa;
 
   sa.sa_sigaction = sighandler;
   sa.sa_flags = SA_SIGINFO;
 
+  update = 1;
   for (int i = 0; i < LENGTH(blocks); i++) {
     if (blocks[i].signal)
       sigaction(SIGRTMIN + blocks[i].signal, &sa, NULL);
@@ -223,13 +225,13 @@ void run(Display *dpy)
   blen = LENGTH(blocks);
 
   while (1) {
-    memset(status, 0, MAXLEN);
     if ((++counter) == 60)
       counter = 0;
     for (int i = 0; i < blen; i++) {
       if (blocks[i].interval == 0)
         continue;
       if (blocks[i].interval == counter || (blocks[i].interval == 60 && counter == 0)) {
+        update = 1;
         switch (blocks[i].cmd) {
         case CmdDate:
           cmddate(i);
@@ -249,10 +251,14 @@ void run(Display *dpy)
         }
       }
     }
-    for (int i = blen - 1; i >= 0; i--) {
-      strcat(status, sblocks[i]);
-      if (i > 0)
-        strcat(status, DELIMITER);
+    if (update) {
+      memset(status, 0, MAXLEN);
+      for (int i = blen - 1; i >= 0; i--) {
+        strcat(status, sblocks[i]);
+        if (i > 0)
+          strcat(status, DELIMITER);
+      }
+      update = 0;
     }
     if (debug) {
       printf("%d %s\n", getpid(), status);
@@ -272,6 +278,9 @@ int main(int argc, char *argv[])
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "-d")) {
       debug = 1;
+    } else {
+      printf("usage: dsblocks [-d debug]\n");
+      return EXIT_SUCCESS;
     }
   }
 
@@ -285,7 +294,7 @@ int main(int argc, char *argv[])
   sigemptyset(&sa.sa_mask);
   sigaction(SIGRTMIN, &sa, NULL);
 
-  readstatus();
+  setup();
   run(dpy);
   XCloseDisplay(dpy);
   return EXIT_SUCCESS;
