@@ -251,10 +251,13 @@ int main(int argc, char *argv[])
   struct sigaction sa;
 
   for (int i = 1; i < argc; i++) {
-    if (!strcmp(argv[i], "-d")) {
+    if (!strcmp(argv[i], "-v")) {
+      printf("dsblocks-" VERSION "\n");
+      return EXIT_SUCCESS;
+    } else if (!strcmp(argv[i], "-d")) {
       debug = 1;
     } else {
-      printf("usage: dsblocks [-d debug]\n");
+      printf("usage: dsblocks [-v] [-d debug]\n");
       return EXIT_SUCCESS;
     }
   }

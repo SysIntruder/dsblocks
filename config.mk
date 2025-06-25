@@ -9,7 +9,8 @@ MANPREFIX = $(PREFIX)/share/man
 LIBS = -lX11 -lasound -lm
 
 # flags
-CFLAGS = -std=c99 -pedantic -Wall -Os
+CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\"
+CFLAGS = -std=c99 -pedantic -Wall -Os $(CPPFLAGS)
 LDFLAGS = $(LIBS)
 
 # compiler and linker

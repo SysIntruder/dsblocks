@@ -11,7 +11,7 @@ config.h:
 	cp config.def.h $@
 
 dsblocks: config.h
-	$(CC) dsblocks.c -o $@ $(LDFLAGS)
+	$(CC) dsblocks.c -o $@ $(CFLAGS) $(LDFLAGS)
 
 clean:
 	rm -f dsblocks dsblocks-$(VERSION).tar.gz
