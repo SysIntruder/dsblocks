@@ -147,6 +147,27 @@ void cmdspk(int i, int b)
     sprintf(sblocks[i], "%cV: MUTE%c", blocks[i].signal, blocks[i].signal);
 }
 
+void runcmd(int i, int b)
+{
+  switch (blocks[i].cmd) {
+  case CmdDate:
+    cmddate(i);
+    break;
+  case CmdBat:
+    cmdbat(i);
+    break;
+  case CmdBri:
+    cmdbri(i, b);
+    break;
+  case CmdMic:
+    cmdmic(i, b);
+    break;
+  case CmdSpk:
+    cmdspk(i, b);
+    break;
+  }
+}
+
 void sighandler(int signum, siginfo_t *si, void *ucontext)
 {
   int sig, btn;
@@ -157,23 +178,7 @@ void sighandler(int signum, siginfo_t *si, void *ucontext)
     for (int i = 0; i < LENGTH(blocks); i++) {
       if (blocks[i].signal != 0 && blocks[i].signal == sig) {
         update = 1;
-        switch (blocks[i].cmd) {
-        case CmdDate:
-          cmddate(i);
-          break;
-        case CmdBat:
-          cmdbat(i);
-          break;
-        case CmdBri:
-          cmdbri(i, btn);
-          break;
-        case CmdMic:
-          cmdmic(i, btn);
-          break;
-        case CmdSpk:
-          cmdspk(i, btn);
-          break;
-        }
+        runcmd(i, btn);
       }
     }
   }
@@ -190,23 +195,7 @@ void setup()
   for (int i = 0; i < LENGTH(blocks); i++) {
     if (blocks[i].signal)
       sigaction(SIGRTMIN + blocks[i].signal, &sa, NULL);
-    switch (blocks[i].cmd) {
-    case CmdDate:
-      cmddate(i);
-      break;
-    case CmdBat:
-      cmdbat(i);
-      break;
-    case CmdBri:
-      cmdbri(i, 0);
-      break;
-    case CmdMic:
-      cmdmic(i, 0);
-      break;
-    case CmdSpk:
-      cmdspk(i, 0);
-      break;
-    }
+    runcmd(i, 0);
   }
 }
 
@@ -234,23 +223,7 @@ void run(Display *dpy)
         continue;
       if (blocks[i].interval == counter || (blocks[i].interval == 60 && counter == 0)) {
         update = 1;
-        switch (blocks[i].cmd) {
-        case CmdDate:
-          cmddate(i);
-          break;
-        case CmdBat:
-          cmdbat(i);
-          break;
-        case CmdBri:
-          cmdbri(i, 0);
-          break;
-        case CmdMic:
-          cmdmic(i, 0);
-          break;
-        case CmdSpk:
-          cmdspk(i, 0);
-          break;
-        }
+        runcmd(i, 0);
       }
     }
     if (update) {
