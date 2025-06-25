@@ -20,11 +20,10 @@ int gethandleelem(
   snd_mixer_selem_id_set_name(*sid, iscapture ? CAPTURE : PLAYBACK);
 
   if (!(*elem = snd_mixer_find_selem(*handle, *sid))) {
-    if (iscapture) {
+    if (iscapture)
       perror("can't find selem " CAPTURE);
-    } else {
+    else
       perror("can't find selem " PLAYBACK);
-    }
     return 1;
   }
   return 0;

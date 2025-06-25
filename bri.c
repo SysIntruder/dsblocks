@@ -40,8 +40,6 @@ void writebrightness(float *b)
 
 void changebrightness(int up, float step, float *b, float *mb)
 {
-  if (*mb == 0)
-    readbrightness(b, mb);
   if (*mb == 0) {
     perror("max_brightness is 0, aborting");
     return;
