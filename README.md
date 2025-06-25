@@ -1,5 +1,6 @@
 # DSBlocks
 _simple status blocks for dwm_
+
 DSBlocks is simple status blocks for dwm with signaling support.
 ## Modules
 - date
