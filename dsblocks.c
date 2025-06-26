@@ -229,7 +229,7 @@ void run(Display *dpy)
     for (int i = 0; i < blen; i++) {
       if (blocks[i].interval == 0)
         continue;
-      if (blocks[i].interval == counter || (blocks[i].interval == 60 && counter == 0)) {
+      if ((counter % blocks[i].interval) || (blocks[i].interval == 60 && counter == 0)) {
         update = 1;
         runcmd(i, 0);
       }
