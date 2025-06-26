@@ -127,7 +127,7 @@ void clkspk(int b)
 {
   switch (b) {
   case BtnLeft:
-    togglemute(0, &micon);
+    togglemute(0, &spkon);
     break;
   case BtnScUp:
     changevolume(1, 0, STEP, &minspk, &maxspk, &rspk);
