@@ -197,10 +197,10 @@ void setup()
   update = 1;
   for (int i = 0; i < LENGTH(blocks); i++) {
     if (!blocks[i].signal) {
-      printf("use 31 to ignore signal, aborting\n");
+      printf("use 1 to ignore signal, aborting\n");
       error = 1;
       break;
-    } else if (blocks[i].signal != 31) {
+    } else if (blocks[i].signal != 1) {
       sigaction(SIGRTMIN + blocks[i].signal, &sa, NULL);
     }
     runcmd(i, 0);

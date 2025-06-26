@@ -11,11 +11,11 @@
 #define MAXLEN 2048
 #define DELIMITER " | "
 
-/* signal 31 will be ignored */
+/* signal 1 will be ignored */
 static const Block blocks[] = {
-    {CmdDate, 60, 31},
-    {CmdBat, 0, 1},
-    {CmdBri, 0, 2},
-    {CmdMic, 0, 3},
-    {CmdSpk, 0, 4},
+    {CmdDate, 60, 1},
+    {CmdBat, 0, 2},
+    {CmdBri, 0, 3},
+    {CmdMic, 0, 4},
+    {CmdSpk, 0, 5},
 };
