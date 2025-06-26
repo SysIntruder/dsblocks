@@ -2,28 +2,24 @@
 
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 void readbrightness(float *b, float *mb)
 {
   FILE *f;
-  char sb[4], smb[4];
 
   if (!(f = fopen(BRIGHTNESS, "r"))) {
     perror("can't read brightness");
     return;
   }
-  fgets(sb, sizeof(sb), f);
+  fscanf(f, "%f", b);
   fclose(f);
-  *b = strtof(sb, NULL);
 
   if (!(f = fopen(MAX_BRIGHTNESS, "r"))) {
     perror("can't read max_brightness");
     return;
   }
-  fgets(smb, sizeof(smb), f);
+  fscanf(f, "%f", mb);
   fclose(f);
-  *mb = strtof(smb, NULL);
 }
 
 void writebrightness(float *b)

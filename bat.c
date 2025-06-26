@@ -1,26 +1,22 @@
 /* See LICENSE file for copyright and license details. */
 
 #include <stdio.h>
-#include <stdlib.h>
 
 void readbattery(int *c, int *a)
 {
   FILE *f;
-  char sc[4], sa[2];
 
   if (!(f = fopen(CAPACITY, "r"))) {
     perror("can't read capacity");
     return;
   }
-  fgets(sc, sizeof(sc), f);
+  fscanf(f, "%d", c);
   fclose(f);
-  *c = strtof(sc, NULL);
 
   if (!(f = fopen(ADAPTER, "r"))) {
     perror("can't read adapter");
     return;
   }
-  fgets(sa, sizeof(sa), f);
+  fscanf(f, "%d", a);
   fclose(f);
-  *a = strtof(sa, NULL);
 }
