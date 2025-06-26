@@ -193,7 +193,7 @@ void setup()
 
   sa.sa_sigaction = sighandler;
   sa.sa_flags = SA_SIGINFO;
-
+  sigemptyset(&sa.sa_mask);
   update = 1;
   for (int i = 0; i < LENGTH(blocks); i++) {
     if (!blocks[i].signal) {
@@ -256,7 +256,6 @@ void run(Display *dpy)
 int main(int argc, char *argv[])
 {
   Display *dpy;
-  struct sigaction sa;
 
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "-v")) {
@@ -274,11 +273,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "can't open display");
     return EXIT_FAILURE;
   }
-
-  sa.sa_sigaction = sighandler;
-  sa.sa_flags = SA_SIGINFO;
-  sigemptyset(&sa.sa_mask);
-  sigaction(SIGRTMIN, &sa, NULL);
 
   setup();
   run(dpy);
