@@ -18,7 +18,7 @@ clean:
 
 dist: clean
 	mkdir -p dsblocks-$(VERSION)
-	cp Makefile config.def.h config.mk dsblocks.1 README.md $(SRC)\
+	cp Makefile config.def.h config.mk dsblocks.1 README $(SRC)\
 					dsblocks-$(VERSION)
 	tar -cf dsblocks-$(VERSION).tar dsblocks-$(VERSION)
 	gzip dsblocks-$(VERSION).tar
