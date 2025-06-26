@@ -1,8 +1,6 @@
 /* See LICENSE file for copyright and license details. */
 
 #include <alsa/asoundlib.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 int gethandleelem(
     snd_mixer_t **handle, snd_mixer_selem_id_t **sid, snd_mixer_elem_t **elem,
