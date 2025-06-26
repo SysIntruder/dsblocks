@@ -1,0 +1,159 @@
+diff --git a/config.def.h b/config.def.h
+index d502520..19fca36 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -4,6 +4,7 @@
+ #define ADAPTER "/sys/class/power_supply/ADP0/online"
+ #define BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/brightness"
+ #define MAX_BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/max_brightness"
++#define NETWORK "/sys/class/net/wlp1s0/statistics"
+ #define CAPTURE "Capture"
+ #define PLAYBACK "Master"
+ #define STEP 5
+@@ -18,4 +19,5 @@ static const Block blocks[] = {
+     {CmdBri, 0, 3},
+     {CmdMic, 0, 4},
+     {CmdSpk, 0, 5},
++    {CmdNet, 2, 1},
+ };
+diff --git a/dsblocks.c b/dsblocks.c
+index 98b0d2e..d954f3d 100644
+--- a/dsblocks.c
++++ b/dsblocks.c
+@@ -13,7 +13,8 @@ enum { CmdDate,
+        CmdBat,
+        CmdBri,
+        CmdMic,
+-       CmdSpk };
++       CmdSpk,
++       CmdNet };
+ 
+ enum { BtnLeft = 1,
+        BtnRight,
+@@ -28,6 +29,7 @@ typedef struct {
+ 
+ #include "config.h"
+ 
++#include "net.c"
+ #include "alsa.c"
+ #include "bat.c"
+ #include "bri.c"
+@@ -39,6 +41,8 @@ static long rspk, minspk, maxspk;
+ static long rmic, minmic, maxmic;
+ static int spkon, micon;
+ static float briperc, spkperc, micperc;
++static unsigned long rx1, rx2, tx1, tx2;
++static double rx, tx;
+ static char sblocks[LENGTH(blocks)][BLOCKLEN];
+ static int counter, debug, update, error;
+ 
+@@ -58,6 +62,26 @@ void updatemicperc()
+   micperc = 100.0 * (rmic - minmic) / (maxmic - minmic);
+ }
+ 
++void updatenetrx()
++{
++  if (rx2) {
++    rx = (rx2 - rx1) / 1024.0;
++    rx1 = rx1 ^ rx2;
++    rx2 = rx1 ^ rx2;
++    rx1 = rx1 ^ rx2;
++  }
++}
++
++void updatenettx()
++{
++  if (tx2) {
++    tx = (tx2 - tx1) / 1024.0;
++    tx1 = tx1 ^ tx2;
++    tx2 = tx1 ^ tx2;
++    tx1 = tx1 ^ tx2;
++  }
++}
++
+ void cmddate(int i)
+ {
+   char tmp[BLOCKLEN];
+@@ -150,6 +174,23 @@ void cmdspk(int i, int b)
+     sprintf(sblocks[i], "%cV: MUTE%c", blocks[i].signal, blocks[i].signal);
+ }
+ 
++void cmdnet(int i)
++{
++  if (!rx1)
++    readnetrx(&rx1);
++  else
++    readnetrx(&rx2);
++
++  if (!tx1)
++    readnettx(&tx1);
++  else
++    readnettx(&tx2);
++
++  updatenetrx();
++  updatenettx();
++  sprintf(sblocks[i], "%cU: %.fK%sD: %.fK%c", blocks[i].signal, tx, DELIMITER, rx, blocks[i].signal);
++}
++
+ void runcmd(int i, int b)
+ {
+   switch (blocks[i].cmd) {
+@@ -168,6 +209,9 @@ void runcmd(int i, int b)
+   case CmdSpk:
+     cmdspk(i, b);
+     break;
++  case CmdNet:
++    cmdnet(i);
++    break;
+   }
+ }
+ 
+@@ -196,6 +240,13 @@ void setup()
+   sigemptyset(&sa.sa_mask);
+   update = 1;
+   for (int i = 0; i < LENGTH(blocks); i++) {
++    /* min net interval is 2 */
++    if (blocks[i].cmd == CmdNet && blocks[i].interval == 1) {
++      printf("min interval for net is 2, aborting\n");
++      error = 1;
++      break;
++    }
++
+     if (!blocks[i].signal) {
+       printf("use 1 to ignore signal, aborting\n");
+       error = 1;
+diff --git a/net.c b/net.c
+new file mode 100644
+index 0000000..708eaef
+--- /dev/null
++++ b/net.c
+@@ -0,0 +1,29 @@
++#include <stdio.h>
++
++void readnetrx(unsigned long *rx)
++{
++  FILE *f;
++  char p[2048];
++
++  snprintf(p, sizeof(p), NETWORK"/rx_bytes");
++  if (!(f = fopen(p, "r"))) {
++    perror("can't read rx statistics");
++    return;
++  }
++  fscanf(f, "%lu", rx);
++  fclose(f);
++}
++
++void readnettx(unsigned long *tx)
++{
++  FILE *f;
++  char p[2048];
++
++  snprintf(p, sizeof(p), NETWORK"/tx_bytes");
++  if (!(f = fopen(p, "r"))) {
++    perror("can't read tx statistics");
++    return;
++  }
++  fscanf(f, "%lu", tx);
++  fclose(f);
++}
