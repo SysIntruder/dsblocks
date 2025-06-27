@@ -1,8 +1,16 @@
 diff --git a/config.def.h b/config.def.h
-index d502520..56b62c3 100644
+index d502520..cb9d9d3 100644
 --- a/config.def.h
 +++ b/config.def.h
-@@ -18,4 +18,5 @@ static const Block blocks[] = {
+@@ -6,6 +6,7 @@
+ #define MAX_BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/max_brightness"
+ #define CAPTURE "Capture"
+ #define PLAYBACK "Master"
++#define IFACE "/sys/class/net"
+ #define STEP 5
+ #define BLOCKLEN 25
+ #define MAXLEN 2048
+@@ -18,4 +19,5 @@ static const Block blocks[] = {
      {CmdBri, 0, 3},
      {CmdMic, 0, 4},
      {CmdSpk, 0, 5},
@@ -57,37 +65,41 @@ index 98b0d2e..18edaed 100644
  
 diff --git a/iface.c b/iface.c
 new file mode 100644
-index 0000000..a86cc87
+index 0000000..e905c5c
 --- /dev/null
 +++ b/iface.c
-@@ -0,0 +1,30 @@
-+#include <arpa/inet.h>
-+#include <ifaddrs.h>
-+#include <net/if.h>
+@@ -0,0 +1,34 @@
++#include <dirent.h>
 +#include <stdio.h>
 +#include <string.h>
 +
 +void readiface(char *i, size_t is)
 +{
-+  struct ifaddrs *ifaddr, *ifa;
++  DIR *dir;
++  struct dirent *entry;
++  char p[MAXLEN], s[16];
++  FILE *f;
 +
 +  snprintf(i, is, "-");
-+  if (getifaddrs(&ifaddr) == -1) {
-+    perror("can't get ifaddrs");
++  if (!(dir = opendir(IFACE))) {
++    perror("can't open iface");
 +    return;
 +  }
 +
-+  for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
-+    if (!ifa->ifa_addr || ifa->ifa_flags & IFF_LOOPBACK)
++  while((entry = readdir(dir))) {
++    char *iface = entry->d_name;
++    if (!strcmp(iface, ".") || !strcmp(iface, "..") || !strcmp(iface, "lo"))
 +      continue;
-+    if (ifa->ifa_flags & IFF_UP && ifa->ifa_addr->sa_family == AF_INET) {
-+      struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
-+      char ip[INET_ADDRSTRLEN];
-+      inet_ntop(AF_INET, &(sa->sin_addr), ip, INET_ADDRSTRLEN);
-+      if (strcmp(ip, "0.0.0.0")) {
-+        snprintf(i, is, "%s", ifa->ifa_name);
-+        break;
-+      }
++    snprintf(p, MAXLEN, IFACE"/%s/operstate", iface);
++    if (!(f = fopen(p, "r"))) {
++      perror("can't read operstate");
++      continue;
++    }
++    fgets(s, sizeof(s), f);
++    fclose(f);
++    if (!strncmp(s, "up", 2)) {
++      snprintf(i, is, "%s", iface);
++      break;
 +    }
 +  }
 +}
