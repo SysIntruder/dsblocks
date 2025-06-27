@@ -1,0 +1,91 @@
+diff --git a/config.def.h b/config.def.h
+index d502520..818dc55 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -6,6 +6,7 @@
+ #define MAX_BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/max_brightness"
+ #define CAPTURE "Capture"
+ #define PLAYBACK "Master"
++#define DISK "/"
+ #define STEP 5
+ #define BLOCKLEN 25
+ #define MAXLEN 2048
+@@ -18,4 +19,5 @@ static const Block blocks[] = {
+     {CmdBri, 0, 3},
+     {CmdMic, 0, 4},
+     {CmdSpk, 0, 5},
++    {CmdDisk, 30, 1},
+ };
+diff --git a/disk.c b/disk.c
+new file mode 100644
+index 0000000..f9ab454
+--- /dev/null
++++ b/disk.c
+@@ -0,0 +1,13 @@
++#include <stdio.h>
++
++void readdisk(float *d)
++{
++  char cmd[MAXLEN];
++  FILE *f;
++
++  snprintf(cmd, sizeof(cmd), "df --output=pcent %s | tail -n 1 | tr -d ' %%\\n'", DISK);
++  if (!(f = popen(cmd, "r")))
++    return;
++  fscanf(f, "%f", d);
++  pclose(f);
++}
+diff --git a/dsblocks.c b/dsblocks.c
+index 98b0d2e..2476621 100644
+--- a/dsblocks.c
++++ b/dsblocks.c
+@@ -13,7 +13,8 @@ enum { CmdDate,
+        CmdBat,
+        CmdBri,
+        CmdMic,
+-       CmdSpk };
++       CmdSpk,
++       CmdDisk };
+ 
+ enum { BtnLeft = 1,
+        BtnRight,
+@@ -28,6 +29,7 @@ typedef struct {
+ 
+ #include "config.h"
+ 
++#include "disk.c"
+ #include "alsa.c"
+ #include "bat.c"
+ #include "bri.c"
+@@ -38,7 +40,7 @@ static float rbri, maxbri;
+ static long rspk, minspk, maxspk;
+ static long rmic, minmic, maxmic;
+ static int spkon, micon;
+-static float briperc, spkperc, micperc;
++static float briperc, spkperc, micperc, diskperc;
+ static char sblocks[LENGTH(blocks)][BLOCKLEN];
+ static int counter, debug, update, error;
+ 
+@@ -150,6 +152,12 @@ void cmdspk(int i, int b)
+     sprintf(sblocks[i], "%cV: MUTE%c", blocks[i].signal, blocks[i].signal);
+ }
+ 
++void cmddisk(int i)
++{
++  readdisk(&diskperc);
++  sprintf(sblocks[i], "%cF: %.f%%%c", blocks[i].signal, diskperc, blocks[i].signal);
++}
++
+ void runcmd(int i, int b)
+ {
+   switch (blocks[i].cmd) {
+@@ -168,6 +176,9 @@ void runcmd(int i, int b)
+   case CmdSpk:
+     cmdspk(i, b);
+     break;
++  case CmdDisk:
++    cmddisk(i);
++    break;
+   }
+ }
+ 
