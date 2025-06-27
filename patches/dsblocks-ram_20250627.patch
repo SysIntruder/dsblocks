@@ -1,0 +1,102 @@
+diff --git a/config.def.h b/config.def.h
+index d502520..fca522a 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -6,6 +6,7 @@
+ #define MAX_BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/max_brightness"
+ #define CAPTURE "Capture"
+ #define PLAYBACK "Master"
++#define RAM "/proc/meminfo"
+ #define STEP 5
+ #define BLOCKLEN 25
+ #define MAXLEN 2048
+@@ -18,4 +19,5 @@ static const Block blocks[] = {
+     {CmdBri, 0, 3},
+     {CmdMic, 0, 4},
+     {CmdSpk, 0, 5},
++    {CmdRam, 2, 1},
+ };
+diff --git a/dsblocks.c b/dsblocks.c
+index 98b0d2e..099b670 100644
+--- a/dsblocks.c
++++ b/dsblocks.c
+@@ -13,7 +13,8 @@ enum { CmdDate,
+        CmdBat,
+        CmdBri,
+        CmdMic,
+-       CmdSpk };
++       CmdSpk,
++       CmdRam };
+ 
+ enum { BtnLeft = 1,
+        BtnRight,
+@@ -28,6 +29,7 @@ typedef struct {
+ 
+ #include "config.h"
+ 
++#include "ram.c"
+ #include "alsa.c"
+ #include "bat.c"
+ #include "bri.c"
+@@ -38,7 +40,7 @@ static float rbri, maxbri;
+ static long rspk, minspk, maxspk;
+ static long rmic, minmic, maxmic;
+ static int spkon, micon;
+-static float briperc, spkperc, micperc;
++static float briperc, spkperc, micperc, ramperc;
+ static char sblocks[LENGTH(blocks)][BLOCKLEN];
+ static int counter, debug, update, error;
+ 
+@@ -150,6 +152,12 @@ void cmdspk(int i, int b)
+     sprintf(sblocks[i], "%cV: MUTE%c", blocks[i].signal, blocks[i].signal);
+ }
+ 
++void cmdram(int i)
++{
++  readram(&ramperc);
++  sprintf(sblocks[i], "%cR: %.f%%%c", blocks[i].signal, ramperc, blocks[i].signal);
++}
++
+ void runcmd(int i, int b)
+ {
+   switch (blocks[i].cmd) {
+@@ -168,6 +176,9 @@ void runcmd(int i, int b)
+   case CmdSpk:
+     cmdspk(i, b);
+     break;
++  case CmdRam:
++    cmdram(i);
++    break;
+   }
+ }
+ 
+diff --git a/ram.c b/ram.c
+new file mode 100644
+index 0000000..225f579
+--- /dev/null
++++ b/ram.c
+@@ -0,0 +1,24 @@
++#include <stdio.h>
++
++void readram(float *r)
++{
++  FILE *f;
++  char line[256];
++  unsigned long long int mtotal, mfree, mbuf, mcached, mavail;
++
++  if (!(f = fopen(RAM, "r")))
++    return;
++  while (fgets(line, sizeof(line), f)) {
++      if (sscanf(line, "MemTotal: %llu kB", &mtotal)) continue;
++      if (sscanf(line, "MemFree: %llu kB", &mfree)) continue;
++      if (sscanf(line, "Buffers: %llu kB", &mbuf)) continue;
++      if (sscanf(line, "Cached: %llu kB", &mcached)) continue;
++
++    if (mtotal && mfree && mbuf && mcached) break;
++  }
++  fclose(f);
++
++  mavail = mfree + mbuf + mcached;
++  if (mavail < mtotal)
++    *r = ((float)(mtotal - mavail) / mtotal) * 100.0;
++}
