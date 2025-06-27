@@ -1,0 +1,138 @@
+diff --git a/config.def.h b/config.def.h
+index d502520..15cdc24 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -6,6 +6,7 @@
+ #define MAX_BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/max_brightness"
+ #define CAPTURE "Capture"
+ #define PLAYBACK "Master"
++#define CPU "/proc/stat"
+ #define STEP 5
+ #define BLOCKLEN 25
+ #define MAXLEN 2048
+@@ -18,4 +19,5 @@ static const Block blocks[] = {
+     {CmdBri, 0, 3},
+     {CmdMic, 0, 4},
+     {CmdSpk, 0, 5},
++    {CmdCpu, 2, 1},
+ };
+diff --git a/cpu.c b/cpu.c
+new file mode 100644
+index 0000000..7624f0d
+--- /dev/null
++++ b/cpu.c
+@@ -0,0 +1,17 @@
++#include <stdio.h>
++
++void readcpu(unsigned long long int *t, unsigned long long int *i)
++{
++  FILE *f;
++  char line[MAXLEN];
++  unsigned long long int user, nice, sys, idle, iow, irq, sirq, steal;
++
++  if (!(f = fopen(CPU, "r")))
++    return;
++  fgets(line, sizeof(line), f);
++  sscanf(line, "cpu %llu %llu %llu %llu %llu %llu %llu %llu", &user, &nice, &sys, &idle, &iow, &irq, &sirq, &steal);
++  fclose(f);
++
++  *t = user + nice + sys + idle + iow + irq + sirq + steal;
++  *i = idle + iow;
++}
+diff --git a/dsblocks.c b/dsblocks.c
+index 98b0d2e..cec3d97 100644
+--- a/dsblocks.c
++++ b/dsblocks.c
+@@ -13,7 +13,8 @@ enum { CmdDate,
+        CmdBat,
+        CmdBri,
+        CmdMic,
+-       CmdSpk };
++       CmdSpk,
++       CmdCpu };
+ 
+ enum { BtnLeft = 1,
+        BtnRight,
+@@ -28,6 +29,7 @@ typedef struct {
+ 
+ #include "config.h"
+ 
++#include "cpu.c"
+ #include "alsa.c"
+ #include "bat.c"
+ #include "bri.c"
+@@ -38,9 +40,10 @@ static float rbri, maxbri;
+ static long rspk, minspk, maxspk;
+ static long rmic, minmic, maxmic;
+ static int spkon, micon;
+-static float briperc, spkperc, micperc;
++static float briperc, spkperc, micperc, cpuperc;
+ static char sblocks[LENGTH(blocks)][BLOCKLEN];
+ static int counter, debug, update, error;
++static unsigned long long int cput1, cput2, cpui1, cpui2;
+ 
+ void updatebriperc()
+ {
+@@ -58,6 +61,20 @@ void updatemicperc()
+   micperc = 100.0 * (rmic - minmic) / (maxmic - minmic);
+ }
+ 
++void updatecpuperc()
++{
++  if (cput2 && cpui2) {
++    cpuperc = (1.0f - (float)(cpui2 - cpui1) / (float)(cput2 - cput1)) * 100.0;
++    cpui1 = cpui1 ^ cpui2;
++    cpui2 = cpui1 ^ cpui2;
++    cpui1 = cpui1 ^ cpui2;
++
++    cput1 = cput1 ^ cput2;
++    cput2 = cput1 ^ cput2;
++    cput1 = cput1 ^ cput2;
++  }
++}
++
+ void cmddate(int i)
+ {
+   char tmp[BLOCKLEN];
+@@ -150,6 +167,17 @@ void cmdspk(int i, int b)
+     sprintf(sblocks[i], "%cV: MUTE%c", blocks[i].signal, blocks[i].signal);
+ }
+ 
++void cmdcpu(int i)
++{
++  if (!cput1 || !cpui1)
++    readcpu(&cput1, &cpui1);
++  else
++    readcpu(&cput2, &cpui2);
++
++  updatecpuperc();
++  sprintf(sblocks[i], "%cC: %.f%%%c", blocks[i].signal, cpuperc, blocks[i].signal);
++}
++
+ void runcmd(int i, int b)
+ {
+   switch (blocks[i].cmd) {
+@@ -168,6 +196,9 @@ void runcmd(int i, int b)
+   case CmdSpk:
+     cmdspk(i, b);
+     break;
++  case CmdCpu:
++    cmdcpu(i);
++    break;
+   }
+ }
+ 
+@@ -196,6 +227,13 @@ void setup()
+   sigemptyset(&sa.sa_mask);
+   update = 1;
+   for (int i = 0; i < LENGTH(blocks); i++) {
++    /* min cpu interval is 2 */
++    if (blocks[i].cmd == CmdCpu && blocks[i].interval == 1) {
++      printf("min interval for cpu is 2, aborting\n");
++      error = 1;
++      break;
++    }
++
+     if (!blocks[i].signal) {
+       printf("use 1 to ignore signal, aborting\n");
+       error = 1;
