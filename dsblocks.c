@@ -178,12 +178,10 @@ void sighandler(int signum, siginfo_t *si, void *ucontext)
 
   sig = signum - SIGRTMIN;
   btn = si->si_value.sival_int;
-  if (btn) {
-    for (int i = 0; i < LENGTH(blocks); i++) {
-      if (blocks[i].signal == sig) {
-        update = 1;
-        runcmd(i, btn);
-      }
+  for (int i = 0; i < LENGTH(blocks); i++) {
+    if (blocks[i].signal == sig) {
+      update = 1;
+      runcmd(i, btn);
     }
   }
 }
