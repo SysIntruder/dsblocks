@@ -16,6 +16,7 @@ enum { CmdDate,
        CmdSpk };
 
 enum { BtnLeft = 1,
+       BtnMid,
        BtnRight,
        BtnScUp,
        BtnScDn };
