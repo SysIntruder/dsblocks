@@ -14,10 +14,6 @@ void readbattery(int *c, int *a)
   }
   fscanf(f, "%d", c);
   fclose(f);
-  if (*c <= 20) {
-    snprintf(notifcmd, MAXLEN, "notify-send -u critical 'Battery Low: %d%%'", *c);
-    system(notifcmd);
-  }
 
   if (!(f = fopen(ADAPTER, "r"))) {
     perror("can't read adapter");
@@ -25,4 +21,9 @@ void readbattery(int *c, int *a)
   }
   fscanf(f, "%d", a);
   fclose(f);
+
+  if (*c <= 20 && !*a) {
+    snprintf(notifcmd, MAXLEN, "notify-send -u critical 'Battery Low: %d%%'", *c);
+    system(notifcmd);
+  }
 }
