@@ -1,0 +1,141 @@
+diff --git a/config.def.h b/config.def.h
+index d502520..e2b4c07 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -6,6 +6,7 @@
+ #define MAX_BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/max_brightness"
+ #define CAPTURE "Capture"
+ #define PLAYBACK "Master"
++#define RECORDPID "/tmp/record"
+ #define STEP 5
+ #define BLOCKLEN 25
+ #define MAXLEN 2048
+@@ -14,8 +15,9 @@
+ /* signal 1 will be ignored */
+ static const Block blocks[] = {
+     {CmdDate, 60, 1},
+-    {CmdBat, 0, 2},
++    {CmdBat, 20, 2},
+     {CmdBri, 0, 3},
+     {CmdMic, 0, 4},
+     {CmdSpk, 0, 5},
++    {CmdRecord, 0, 6},
+ };
+diff --git a/dsblocks.c b/dsblocks.c
+index ef7fee7..84adc32 100644
+--- a/dsblocks.c
++++ b/dsblocks.c
+@@ -13,7 +13,8 @@ enum { CmdDate,
+        CmdBat,
+        CmdBri,
+        CmdMic,
+-       CmdSpk };
++       CmdSpk,
++       CmdRecord };
+ 
+ enum { BtnLeft = 1,
+        BtnMid,
+@@ -29,6 +30,7 @@ typedef struct {
+ 
+ #include "config.h"
+ 
++#include "record.c"
+ #include "alsa.c"
+ #include "bat.c"
+ #include "bri.c"
+@@ -42,6 +44,7 @@ static int spkon, micon;
+ static float briperc, spkperc, micperc;
+ static char sblocks[LENGTH(blocks)][BLOCKLEN];
+ static int counter, debug, update, error;
++static pid_t recpid;
+ 
+ void updatebriperc()
+ {
+@@ -151,6 +154,25 @@ void cmdspk(int i, int b)
+     sprintf(sblocks[i], "%cV: MUTE%c", blocks[i].signal, blocks[i].signal);
+ }
+ 
++void clkrecord(int b)
++{
++  killrecord(recpid);
++}
++
++void cmdrecord(int i, int b)
++{
++  if (b) {
++    clkrecord(b);
++    recpid = 0;
++  }
++  readrecord(&recpid);
++  if (recpid > 0) {
++    sprintf(sblocks[i], "%cREC: %d%c", blocks[i].signal, recpid, blocks[i].signal);
++  } else {
++    sprintf(sblocks[i], "");
++  }
++}
++
+ void runcmd(int i, int b)
+ {
+   switch (blocks[i].cmd) {
+@@ -169,6 +191,9 @@ void runcmd(int i, int b)
+   case CmdSpk:
+     cmdspk(i, b);
+     break;
++  case CmdRecord:
++    cmdrecord(i, b);
++    break;
+   }
+ }
+ 
+@@ -237,7 +262,7 @@ void run(Display *dpy)
+       memset(status, 0, MAXLEN);
+       for (int i = blen - 1; i >= 0; i--) {
+         strcat(status, sblocks[i]);
+-        if (i > 0)
++        if (i > 0 && strcmp(sblocks[i], ""))
+           strcat(status, DELIMITER);
+       }
+       update = 0;
+diff --git a/record.c b/record.c
+new file mode 100644
+index 0000000..17d140f
+--- /dev/null
++++ b/record.c
+@@ -0,0 +1,37 @@
++#include <errno.h>
++#include <signal.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/types.h>
++
++void readrecord(pid_t *pid)
++{
++  FILE *f;
++  char buff[64], *endptr;
++  long rpid;
++
++  if (!(f = fopen(RECORDPID, "r"))) {
++    perror("no record pid found");
++    return;
++  }
++  fgets(buff, 64, f);
++  fclose(f);
++
++  errno = 0;
++  rpid = strtol(buff, &endptr, 10);
++  if (errno || (*endptr != '\0' && *endptr != '\n') || rpid <= 0) {
++    perror("invalid pid");
++    return;
++  }
++  *pid = rpid;
++}
++
++void killrecord(pid_t pid)
++{
++  if (kill(pid, SIGTERM)) {
++    perror("failed to kill record.sh");
++  }
++  if (remove(RECORDPID)) {
++    perror("failed removing "RECORDPID);
++  }
++}
