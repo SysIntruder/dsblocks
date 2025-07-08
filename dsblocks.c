@@ -13,8 +13,7 @@ enum { CmdDate,
        CmdBat,
        CmdBri,
        CmdMic,
-       CmdSpk,
-       CmdRecord };
+       CmdSpk };
 
 enum { BtnLeft = 1,
        BtnMid,
@@ -30,7 +29,6 @@ typedef struct {
 
 #include "config.h"
 
-#include "record.c"
 #include "alsa.c"
 #include "bat.c"
 #include "bri.c"
@@ -44,7 +42,6 @@ static int spkon, micon;
 static float briperc, spkperc, micperc;
 static char sblocks[LENGTH(blocks)][BLOCKLEN];
 static int counter, debug, update, error;
-static pid_t recpid;
 
 void updatebriperc()
 {
@@ -154,25 +151,6 @@ void cmdspk(int i, int b)
     sprintf(sblocks[i], "%cV: MUTE%c", blocks[i].signal, blocks[i].signal);
 }
 
-void clkrecord(int b)
-{
-  killrecord(recpid);
-}
-
-void cmdrecord(int i, int b)
-{
-  if (b) {
-    clkrecord(b);
-    recpid = 0;
-  }
-  readrecord(&recpid);
-  if (recpid > 0) {
-    sprintf(sblocks[i], "%cREC: %d%c", blocks[i].signal, recpid, blocks[i].signal);
-  } else {
-    sprintf(sblocks[i], "");
-  }
-}
-
 void runcmd(int i, int b)
 {
   switch (blocks[i].cmd) {
@@ -190,9 +168,6 @@ void runcmd(int i, int b)
     break;
   case CmdSpk:
     cmdspk(i, b);
-    break;
-  case CmdRecord:
-    cmdrecord(i, b);
     break;
   }
 }
@@ -262,7 +237,7 @@ void run(Display *dpy)
       memset(status, 0, MAXLEN);
       for (int i = blen - 1; i >= 0; i--) {
         strcat(status, sblocks[i]);
-        if (i > 0 && strcmp(sblocks[i], ""))
+        if (i > 0)
           strcat(status, DELIMITER);
       }
       update = 0;
