@@ -29,3 +29,12 @@ Signaling Change
 ----------------
 signaler.c can be used to test sending signal like this
     ./signaler <block_signal> <block_button> <pid>
+
+
+Notes
+-----
+In my hardware ALSA volume detection is delayed so the workaround
+is retriggering dsblocks change after started it in .xinitrc
+
+    dsblocks &
+    (sleep 1; pkill -RTMIN+4 dsblocks && pkill -RTMIN+5 dsblocks) &
