@@ -135,7 +135,7 @@ void cmdmic(int i, int b)
         blocks[i].signal, blocks[i].pfx, micperc, blocks[i].signal);
   else
     snprintf(sblocks[i], sizeof(sblocks[i]),
-        "%c%sMUTE%c",
+        "%c%sMute%c",
         blocks[i].signal, blocks[i].pfx, blocks[i].signal);
 }
 
@@ -166,7 +166,7 @@ void cmdspk(int i, int b)
         blocks[i].signal, blocks[i].pfx, spkperc, blocks[i].signal);
   else
     snprintf(sblocks[i], sizeof(sblocks[i]),
-        "%c%sMUTE%c",
+        "%c%sMute%c",
         blocks[i].signal, blocks[i].pfx, blocks[i].signal);
 }
 
