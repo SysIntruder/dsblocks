@@ -8,6 +8,8 @@
 #include <unistd.h>
 
 #define LENGTH(X) (sizeof(X) / sizeof(X)[0])
+#define DATELEN 64
+#define BLOCKLEN (DATELEN + PFXLEN + 3)
 
 enum { CmdDate,
        CmdBat,
@@ -25,6 +27,7 @@ typedef struct {
   int cmd;
   int interval;
   int signal;
+  const char *pfx;
 } Block;
 
 #include "config.h"
@@ -61,19 +64,25 @@ void updatemicperc()
 
 void cmddate(int i)
 {
-  char tmp[BLOCKLEN];
+  char tmp[DATELEN];
 
   readdate(tmp, BLOCKLEN);
-  sprintf(sblocks[i], "%c%s%c", blocks[i].signal, tmp, blocks[i].signal);
+  snprintf(sblocks[i], sizeof(sblocks[i]),
+      "%c%s%c",
+      blocks[i].signal, tmp, blocks[i].signal);
 }
 
 void cmdbat(int i)
 {
   readbattery(&batcap, &batadp);
   if (batadp)
-    sprintf(sblocks[i], "%cP: %d%%+%c", blocks[i].signal, batcap, blocks[i].signal);
+    snprintf(sblocks[i], sizeof(sblocks[i]),
+        "%c%s%d%%+%c",
+        blocks[i].signal, blocks[i].pfx, batcap, blocks[i].signal);
   else
-    sprintf(sblocks[i], "%cP: %d%%%c", blocks[i].signal, batcap, blocks[i].signal);
+    snprintf(sblocks[i], sizeof(sblocks[i]),
+        "%c%s%d%%%c",
+        blocks[i].signal, blocks[i].pfx, batcap, blocks[i].signal);
 }
 
 void clkbri(int b)
@@ -94,7 +103,9 @@ void cmdbri(int i, int b)
     clkbri(b);
   readbrightness(&rbri, &maxbri);
   updatebriperc();
-  sprintf(sblocks[i], "%cB: %.f%%%c", blocks[i].signal, briperc, blocks[i].signal);
+  snprintf(sblocks[i], sizeof(sblocks[i]),
+      "%c%s%.f%%%c",
+      blocks[i].signal, blocks[i].pfx, briperc, blocks[i].signal);
 }
 
 void clkmic(int b)
@@ -119,9 +130,13 @@ void cmdmic(int i, int b)
   readvolume(1, &minmic, &maxmic, &rmic, &micon);
   updatemicperc();
   if (micon)
-    sprintf(sblocks[i], "%cM: %.f%%%c", blocks[i].signal, micperc, blocks[i].signal);
+    snprintf(sblocks[i], sizeof(sblocks[i]),
+        "%c%s%.f%%%c",
+        blocks[i].signal, blocks[i].pfx, micperc, blocks[i].signal);
   else
-    sprintf(sblocks[i], "%cM: MUTE%c", blocks[i].signal, blocks[i].signal);
+    snprintf(sblocks[i], sizeof(sblocks[i]),
+        "%c%sMUTE%c",
+        blocks[i].signal, blocks[i].pfx, blocks[i].signal);
 }
 
 void clkspk(int b)
@@ -146,9 +161,13 @@ void cmdspk(int i, int b)
   readvolume(0, &minspk, &maxspk, &rspk, &spkon);
   updatespkperc();
   if (spkon)
-    sprintf(sblocks[i], "%cV: %.f%%%c", blocks[i].signal, spkperc, blocks[i].signal);
+    snprintf(sblocks[i], sizeof(sblocks[i]),
+        "%c%s%.f%%%c",
+        blocks[i].signal, blocks[i].pfx, spkperc, blocks[i].signal);
   else
-    sprintf(sblocks[i], "%cV: MUTE%c", blocks[i].signal, blocks[i].signal);
+    snprintf(sblocks[i], sizeof(sblocks[i]),
+        "%c%sMUTE%c",
+        blocks[i].signal, blocks[i].pfx, blocks[i].signal);
 }
 
 void runcmd(int i, int b)

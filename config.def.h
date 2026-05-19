@@ -7,15 +7,15 @@
 #define CAPTURE "Capture"
 #define PLAYBACK "Master"
 #define STEP 5
-#define BLOCKLEN 25
-#define MAXLEN 2048
+#define PFXLEN 4    /* longest pfx + 1 */
+#define MAXLEN 2048 /* more than BLOCKLEN * number of blocks */
 #define DELIMITER " "
 
 /* signal 1 will be ignored */
 static const Block blocks[] = {
-    {CmdDate, 60, 1},
-    {CmdBat, 60, 2},
-    {CmdBri, 0, 3},
-    {CmdMic, 0, 4},
-    {CmdSpk, 0, 5},
+    { CmdDate, 60, 1, ""    },
+    { CmdBat,  60, 2, "P: " },
+    { CmdBri,  0,  3, "B: " },
+    { CmdMic,  0,  4, "M: " },
+    { CmdSpk,  0,  5, "S: " },
 };
