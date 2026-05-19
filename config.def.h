@@ -9,12 +9,12 @@
 #define STEP 5
 #define BLOCKLEN 25
 #define MAXLEN 2048
-#define DELIMITER " | "
+#define DELIMITER " "
 
 /* signal 1 will be ignored */
 static const Block blocks[] = {
     {CmdDate, 60, 1},
-    {CmdBat, 0, 2},
+    {CmdBat, 60, 2},
     {CmdBri, 0, 3},
     {CmdMic, 0, 4},
     {CmdSpk, 0, 5},
