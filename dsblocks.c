@@ -68,8 +68,8 @@ void cmddate(int i)
 
   readdate(tmp, BLOCKLEN);
   snprintf(sblocks[i], sizeof(sblocks[i]),
-      "%c%s%c",
-      blocks[i].signal, tmp, blocks[i].signal);
+      "%c%s%s%c",
+      blocks[i].signal, blocks[i].pfx, tmp, blocks[i].signal);
 }
 
 void cmdbat(int i)
