@@ -1,0 +1,74 @@
+diff --git a/config.def.h b/config.def.h
+index be36294..dbe9033 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -6,6 +6,7 @@
+ #define MAX_BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/max_brightness"
+ #define CAPTURE "Capture"
+ #define PLAYBACK "Master"
++#define DISK "/"
+ #define STEP 5
+ #define PFXLEN 4    /* longest pfx + 1 */
+ #define MAXLEN 2048 /* more than BLOCKLEN * number of blocks */
+@@ -18,4 +19,5 @@ static const Block blocks[] = {
+     { CmdBri,  0,  3, "B: " },
+     { CmdMic,  0,  4, "M: " },
+     { CmdSpk,  0,  5, "S: " },
++    { CmdDisk, 30, 1, "D: " },
+ };
+diff --git a/dsblocks.c b/dsblocks.c
+index cf11ab1..898530f 100644
+--- a/dsblocks.c
++++ b/dsblocks.c
+@@ -15,7 +15,8 @@ enum { CmdDate,
+        CmdBat,
+        CmdBri,
+        CmdMic,
+-       CmdSpk };
++       CmdSpk,
++       CmdDisk };
+ 
+ enum { BtnLeft = 1,
+        BtnMid,
+@@ -32,6 +33,7 @@ typedef struct {
+ 
+ #include "config.h"
+ 
++#include "disk.c"
+ #include "alsa.c"
+ #include "bat.c"
+ #include "bri.c"
+@@ -42,7 +44,7 @@ static float rbri, maxbri;
+ static long rspk, minspk, maxspk;
+ static long rmic, minmic, maxmic;
+ static int spkon, micon;
+-static float briperc, spkperc, micperc;
++static float briperc, spkperc, micperc, diskperc;
+ static char sblocks[LENGTH(blocks)][BLOCKLEN];
+ static int counter, debug, update, error;
+ 
+@@ -170,6 +172,14 @@ void cmdspk(int i, int b)
+         blocks[i].signal, blocks[i].pfx, blocks[i].signal);
+ }
+ 
++void cmddisk(int i)
++{
++  readdisk(&diskperc);
++  snprintf(sblocks[i], sizeof(sblocks[i]),
++      "%c%s%.f%%%c",
++      blocks[i].signal, blocks[i].pfx, diskperc, blocks[i].signal);
++}
++
+ void runcmd(int i, int b)
+ {
+   switch (blocks[i].cmd) {
+@@ -188,6 +198,9 @@ void runcmd(int i, int b)
+   case CmdSpk:
+     cmdspk(i, b);
+     break;
++  case CmdDisk:
++    cmddisk(i);
++    break;
+   }
+ }
+ 
