@@ -16,8 +16,31 @@ index be36294..d934cd6 100644
      { CmdSpk,  0,  5, "S: " },
 +    { CmdCpu,  2,  1, "C: " },
  };
+diff --git a/cpu.c b/cpu.c
+new file mode 100644
+index 0000000..7624f0d
+--- /dev/null
++++ b/cpu.c
+@@ -0,0 +1,17 @@
++#include <stdio.h>
++
++void readcpu(unsigned long long int *t, unsigned long long int *i)
++{
++  FILE *f;
++  char line[MAXLEN];
++  unsigned long long int user, nice, sys, idle, iow, irq, sirq, steal;
++
++  if (!(f = fopen(CPU, "r")))
++    return;
++  fgets(line, sizeof(line), f);
++  sscanf(line, "cpu %llu %llu %llu %llu %llu %llu %llu %llu", &user, &nice, &sys, &idle, &iow, &irq, &sirq, &steal);
++  fclose(f);
++
++  *t = user + nice + sys + idle + iow + irq + sirq + steal;
++  *i = idle + iow;
++}
 diff --git a/dsblocks.c b/dsblocks.c
-index cf11ab1..a8f9873 100644
+index cf11ab1..459a79a 100644
 --- a/dsblocks.c
 +++ b/dsblocks.c
 @@ -15,7 +15,8 @@ enum { CmdDate,
@@ -85,7 +108,7 @@ index cf11ab1..a8f9873 100644
 +  updatecpuperc();
 +  snprintf(sblocks[i], sizeof(sblocks[i]),
 +      "%c%s%.f%%%c",
-+      blocks[i].signal, blocks[i].pfx, cpuperc, blocks[i].signal);
++      blocks[i].signal, cpuperc, blocks[i].signal);
 +}
 +
  void runcmd(int i, int b)
