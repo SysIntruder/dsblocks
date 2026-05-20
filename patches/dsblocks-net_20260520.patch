@@ -1,0 +1,138 @@
+diff --git a/config.def.h b/config.def.h
+index be36294..879d6cc 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -4,6 +4,7 @@
+ #define ADAPTER "/sys/class/power_supply/ADP0/online"
+ #define BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/brightness"
+ #define MAX_BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/max_brightness"
++#define NETWORK "/sys/class/net/wlp1s0/statistics"
+ #define CAPTURE "Capture"
+ #define PLAYBACK "Master"
+ #define STEP 5
+@@ -18,4 +19,6 @@ static const Block blocks[] = {
+     { CmdBri,  0,  3, "B: " },
+     { CmdMic,  0,  4, "M: " },
+     { CmdSpk,  0,  5, "S: " },
++    { CmdNetDn,2,  1, "D: " },
++    { CmdNetUp,2,  1, "U: " },
+ };
+diff --git a/dsblocks.c b/dsblocks.c
+index cf11ab1..b78b117 100644
+--- a/dsblocks.c
++++ b/dsblocks.c
+@@ -15,7 +15,9 @@ enum { CmdDate,
+        CmdBat,
+        CmdBri,
+        CmdMic,
+-       CmdSpk };
++       CmdSpk,
++       CmdNetUp,
++       CmdNetDn };
+ 
+ enum { BtnLeft = 1,
+        BtnMid,
+@@ -32,6 +34,7 @@ typedef struct {
+ 
+ #include "config.h"
+ 
++#include "net.c"
+ #include "alsa.c"
+ #include "bat.c"
+ #include "bri.c"
+@@ -43,6 +46,8 @@ static long rspk, minspk, maxspk;
+ static long rmic, minmic, maxmic;
+ static int spkon, micon;
+ static float briperc, spkperc, micperc;
++static unsigned long rx1, rx2, tx1, tx2;
++static double rx, tx;
+ static char sblocks[LENGTH(blocks)][BLOCKLEN];
+ static int counter, debug, update, error;
+ 
+@@ -62,6 +67,26 @@ void updatemicperc()
+   micperc = 100.0 * (rmic - minmic) / (maxmic - minmic);
+ }
+ 
++void updatenetrx()
++{
++  if (rx2) {
++    rx = (rx2 - rx1) / 1024.0;
++    rx1 = rx1 ^ rx2;
++    rx2 = rx1 ^ rx2;
++    rx1 = rx1 ^ rx2;
++  }
++}
++
++void updatenettx()
++{
++  if (tx2) {
++    tx = (tx2 - tx1) / 1024.0;
++    tx1 = tx1 ^ tx2;
++    tx2 = tx1 ^ tx2;
++    tx1 = tx1 ^ tx2;
++  }
++}
++
+ void cmddate(int i)
+ {
+   char tmp[DATELEN];
+@@ -170,6 +195,32 @@ void cmdspk(int i, int b)
+         blocks[i].signal, blocks[i].pfx, blocks[i].signal);
+ }
+ 
++void cmdnetup(int i)
++{
++  if (!tx1)
++    readnettx(&tx1);
++  else
++    readnettx(&tx2);
++
++  updatenettx();
++  snprintf(sblocks[i], sizeof(sblocks[i]),
++      "%c%s%.fK%c",
++      blocks[i].signal, blocks[i].pfx, tx, blocks[i].signal);
++}
++
++void cmdnetdn(int i)
++{
++  if (!rx1)
++    readnetrx(&rx1);
++  else
++    readnetrx(&rx2);
++
++  updatenetrx();
++  snprintf(sblocks[i], sizeof(sblocks[i]),
++      "%c%s%.fK%c",
++      blocks[i].signal, blocks[i].pfx, rx, blocks[i].signal);
++}
++
+ void runcmd(int i, int b)
+ {
+   switch (blocks[i].cmd) {
+@@ -188,6 +239,12 @@ void runcmd(int i, int b)
+   case CmdSpk:
+     cmdspk(i, b);
+     break;
++  case CmdNetUp:
++    cmdnetup(i);
++    break;
++  case CmdNetDn:
++    cmdnetdn(i);
++    break;
+   }
+ }
+ 
+@@ -214,6 +271,13 @@ void setup()
+   sigemptyset(&sa.sa_mask);
+   update = 1;
+   for (int i = 0; i < LENGTH(blocks); i++) {
++    /* min net interval is 2 */
++    if ((blocks[i].cmd == CmdNetUp || blocks[i].cmd == CmdNetDn) && blocks[i].interval == 1) {
++      printf("min interval for net is 2, aborting\n");
++      error = 1;
++      break;
++    }
++
+     if (!blocks[i].signal) {
+       printf("use 1 to ignore signal, aborting\n");
+       error = 1;
