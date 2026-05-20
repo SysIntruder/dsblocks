@@ -1,0 +1,67 @@
+diff --git a/config.def.h b/config.def.h
+index be36294..f97c79f 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -6,6 +6,7 @@
+ #define MAX_BRIGHTNESS "/sys/class/backlight/amdgpu_bl1/max_brightness"
+ #define CAPTURE "Capture"
+ #define PLAYBACK "Master"
++#define IFACE "/sys/class/net"
+ #define STEP 5
+ #define PFXLEN 4    /* longest pfx + 1 */
+ #define MAXLEN 2048 /* more than BLOCKLEN * number of blocks */
+@@ -18,4 +19,5 @@ static const Block blocks[] = {
+     { CmdBri,  0,  3, "B: " },
+     { CmdMic,  0,  4, "M: " },
+     { CmdSpk,  0,  5, "S: " },
++    { CmdIface,0,  5, "I: " },
+ };
+diff --git a/dsblocks.c b/dsblocks.c
+index cf11ab1..b2fc00d 100644
+--- a/dsblocks.c
++++ b/dsblocks.c
+@@ -15,7 +15,8 @@ enum { CmdDate,
+        CmdBat,
+        CmdBri,
+        CmdMic,
+-       CmdSpk };
++       CmdSpk,
++       CmdIface };
+ 
+ enum { BtnLeft = 1,
+        BtnMid,
+@@ -32,6 +33,7 @@ typedef struct {
+ 
+ #include "config.h"
+ 
++#include "iface.c"
+ #include "alsa.c"
+ #include "bat.c"
+ #include "bri.c"
+@@ -170,6 +172,16 @@ void cmdspk(int i, int b)
+         blocks[i].signal, blocks[i].pfx, blocks[i].signal);
+ }
+ 
++void cmdiface(int i)
++{
++  char tmp[BLOCKLEN];
++
++  readiface(tmp, BLOCKLEN);
++  snprintf(sblocks[i], sizeof(sblocks[i]),
++      "%c%s%s%c",
++      blocks[i].signal, blocks[i].pfx, tmp, blocks[i].signal);
++}
++
+ void runcmd(int i, int b)
+ {
+   switch (blocks[i].cmd) {
+@@ -188,6 +200,9 @@ void runcmd(int i, int b)
+   case CmdSpk:
+     cmdspk(i, b);
+     break;
++  case CmdIface:
++    cmdiface(i);
++    break;
+   }
+ }
+ 
