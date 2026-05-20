@@ -40,7 +40,7 @@ index 0000000..7624f0d
 +  *i = idle + iow;
 +}
 diff --git a/dsblocks.c b/dsblocks.c
-index cf11ab1..459a79a 100644
+index cf11ab1..a8f9873 100644
 --- a/dsblocks.c
 +++ b/dsblocks.c
 @@ -15,7 +15,8 @@ enum { CmdDate,
@@ -108,7 +108,7 @@ index cf11ab1..459a79a 100644
 +  updatecpuperc();
 +  snprintf(sblocks[i], sizeof(sblocks[i]),
 +      "%c%s%.f%%%c",
-+      blocks[i].signal, cpuperc, blocks[i].signal);
++      blocks[i].signal, blocks[i].pfx, cpuperc, blocks[i].signal);
 +}
 +
  void runcmd(int i, int b)
