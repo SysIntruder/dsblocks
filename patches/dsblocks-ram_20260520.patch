@@ -72,3 +72,33 @@ index cf11ab1..af1c270 100644
    }
  }
  
+diff --git a/ram.c b/ram.c
+new file mode 100644
+index 0000000..225f579
+--- /dev/null
++++ b/ram.c
+@@ -0,0 +1,24 @@
++#include <stdio.h>
++
++void readram(float *r)
++{
++  FILE *f;
++  char line[256];
++  unsigned long long int mtotal, mfree, mbuf, mcached, mavail;
++
++  if (!(f = fopen(RAM, "r")))
++    return;
++  while (fgets(line, sizeof(line), f)) {
++      if (sscanf(line, "MemTotal: %llu kB", &mtotal)) continue;
++      if (sscanf(line, "MemFree: %llu kB", &mfree)) continue;
++      if (sscanf(line, "Buffers: %llu kB", &mbuf)) continue;
++      if (sscanf(line, "Cached: %llu kB", &mcached)) continue;
++
++    if (mtotal && mfree && mbuf && mcached) break;
++  }
++  fclose(f);
++
++  mavail = mfree + mbuf + mcached;
++  if (mavail < mtotal)
++    *r = ((float)(mtotal - mavail) / mtotal) * 100.0;
++}
