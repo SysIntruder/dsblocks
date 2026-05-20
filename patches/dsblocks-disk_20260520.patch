@@ -16,6 +16,25 @@ index be36294..dbe9033 100644
      { CmdSpk,  0,  5, "S: " },
 +    { CmdDisk, 30, 1, "D: " },
  };
+diff --git a/disk.c b/disk.c
+new file mode 100644
+index 0000000..f9ab454
+--- /dev/null
++++ b/disk.c
+@@ -0,0 +1,13 @@
++#include <stdio.h>
++
++void readdisk(float *d)
++{
++  char cmd[MAXLEN];
++  FILE *f;
++
++  snprintf(cmd, sizeof(cmd), "df --output=pcent %s | tail -n 1 | tr -d ' %%\\n'", DISK);
++  if (!(f = popen(cmd, "r")))
++    return;
++  fscanf(f, "%f", d);
++  pclose(f);
++}
 diff --git a/dsblocks.c b/dsblocks.c
 index cf11ab1..898530f 100644
 --- a/dsblocks.c
