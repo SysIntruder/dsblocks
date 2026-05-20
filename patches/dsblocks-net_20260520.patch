@@ -136,3 +136,38 @@ index cf11ab1..b78b117 100644
      if (!blocks[i].signal) {
        printf("use 1 to ignore signal, aborting\n");
        error = 1;
+diff --git a/net.c b/net.c
+new file mode 100644
+index 0000000..708eaef
+--- /dev/null
++++ b/net.c
+@@ -0,0 +1,29 @@
++#include <stdio.h>
++
++void readnetrx(unsigned long *rx)
++{
++  FILE *f;
++  char p[2048];
++
++  snprintf(p, sizeof(p), NETWORK"/rx_bytes");
++  if (!(f = fopen(p, "r"))) {
++    perror("can't read rx statistics");
++    return;
++  }
++  fscanf(f, "%lu", rx);
++  fclose(f);
++}
++
++void readnettx(unsigned long *tx)
++{
++  FILE *f;
++  char p[2048];
++
++  snprintf(p, sizeof(p), NETWORK"/tx_bytes");
++  if (!(f = fopen(p, "r"))) {
++    perror("can't read tx statistics");
++    return;
++  }
++  fscanf(f, "%lu", tx);
++  fclose(f);
++}
